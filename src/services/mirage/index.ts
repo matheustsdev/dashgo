@@ -1,4 +1,10 @@
-import { createServer, Factory, Model, Response } from "miragejs";
+import {
+  ActiveModelSerializer,
+  createServer,
+  Factory,
+  Model,
+  Response,
+} from "miragejs";
 import faker from "faker";
 
 type User = {
@@ -9,6 +15,10 @@ type User = {
 
 export function makeServer() {
   const server = createServer({
+    serializers: {
+      application: ActiveModelSerializer,
+    },
+
     models: {
       user: Model.extend<Partial<User>>({}),
     },
@@ -28,11 +38,11 @@ export function makeServer() {
     },
 
     seeds(server) {
-      server.createList("user", 200);
+      server.createList("user", 1);
     },
 
     routes() {
-      this.namespace = "api";
+      this.namespace = "mirage";
       this.timing = 750;
 
       this.get("/users", function (schema, request) {
@@ -57,10 +67,12 @@ export function makeServer() {
           { users }
         );
       });
+
+      this.get("/users/:id");
       this.post("/users");
 
       this.namespace = "";
-      this.passthrough();
+      this.passthrough("http://localhost:3333/sessions");
     },
   });
 
