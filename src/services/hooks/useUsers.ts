@@ -14,15 +14,19 @@ type GetUserResponse = {
 };
 
 async function getUsers(page: number): Promise<GetUserResponse> {
+  const startUser = (page - 1) * 10;
   const { data, headers } = await api.get("users", {
     params: {
-      page,
+      _start: startUser,
+      _limit: 10,
     },
   });
 
+  console.log(data);
+
   const totalCount = Number(headers["x-total-count"]);
 
-  const users = data.users.map((user) => {
+  const users = data.map((user) => {
     return {
       ...user,
       createdAt: new Date(user.createdAt).toLocaleDateString("pt-Br", {

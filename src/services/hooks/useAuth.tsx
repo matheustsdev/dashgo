@@ -23,7 +23,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   async function signIn({ email, password }: SignInCredentials) {
     console.log(email, password);
     try {
-      console.log("OnTryStart");
       const response = await authApi
         .post("sessions", {
           email: email,
@@ -35,7 +34,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
         .catch((e) => console.log(e));
 
-      console.log("OnTryEnd");
       console.log(response);
     } catch (e) {}
   }
