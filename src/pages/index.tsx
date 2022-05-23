@@ -4,6 +4,9 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useAuth } from "../services/hooks/useAuth";
+import { parseCookies } from "nookies";
+import { GetServerSideProps } from "next";
+import { withSSRGuest } from "../utils/withSSRGuest";
 
 type SignInFormData = {
   email: string;
@@ -67,3 +70,9 @@ export default function SignIn() {
     </Flex>
   );
 }
+
+export const getServerSideProps = withSSRGuest(async (ctx) => {
+  return {
+    props: {},
+  };
+});

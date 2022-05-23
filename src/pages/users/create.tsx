@@ -20,6 +20,8 @@ import { Sidebar } from "../../components/Sidebar";
 import { api } from "../../services/api";
 import { queryClient } from "../../services/queryClient";
 import { useRouter } from "next/router";
+import { withSSRAuth } from "../../utils/withSSRAuth";
+import { setupAuthAPIClient } from "../../services/api/authApi";
 
 type CreateUserFormData = {
   name: string;
@@ -145,3 +147,10 @@ export default function CreateUser() {
     </Box>
   );
 }
+export const getServerSideProps = withSSRAuth(async (ctx) => {
+  const apiClient = setupAuthAPIClient(ctx);
+
+  return {
+    props: {},
+  };
+});

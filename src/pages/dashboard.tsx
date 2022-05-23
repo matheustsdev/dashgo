@@ -1,8 +1,12 @@
 import { Box, Flex, SimpleGrid, Text, theme } from "@chakra-ui/react";
 import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { Header } from "../components/Header";
 import { Sidebar } from "../components/Sidebar";
+import { setupAuthAPIClient } from "../services/api/authApi";
+import { authApi } from "../services/api/authAPIClient";
+import { withSSRAuth } from "../utils/withSSRAuth";
 
 const Chart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
@@ -59,6 +63,17 @@ const options: ApexOptions = {
 const series = [{ name: "series1", data: [31, 120, 10, 28, 51, 18, 109] }];
 
 export default function Dashboard() {
+  useEffect(() => {
+    authApi
+      .get("me")
+      .then((response) => {
+        console.log(response.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
+
   return (
     <Flex direction="column" h="100vh">
       <Header />
@@ -88,3 +103,11 @@ export default function Dashboard() {
     </Flex>
   );
 }
+
+export const getServerSideProps = withSSRAuth(async (ctx) => {
+  const apiClient = setupAuthAPIClient(ctx);
+
+  return {
+    props: {},
+  };
+});

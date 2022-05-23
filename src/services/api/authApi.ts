@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import { parseCookies, setCookie } from "nookies";
-import { api } from ".";
+import { AuthTokenError } from "../errors/AuthTokenError";
+import { signOut } from "../hooks/useAuth";
 
 type ErrorResponse = {
   code: string;
@@ -8,51 +9,99 @@ type ErrorResponse = {
   error: boolean;
 };
 
-let cookies = parseCookies();
+let isRefreshing = false;
+let failedRequestsQueue = [];
 
-export const authApi = axios.create({
-  baseURL: "http://localhost:3333/",
-  headers: {
-    Authorization: `Bearer ${cookies["dashgoAuth.token"]}`,
-  },
-});
+export function setupAuthAPIClient(ctx = undefined) {
+  let cookies = parseCookies(ctx);
 
-authApi.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error: AxiosError<ErrorResponse>) => {
-    if (error.response.status === 401) {
-      if (error.response.data?.code === "token.expired") {
-        cookies = parseCookies();
+  const authApi = axios.create({
+    baseURL: "http://localhost:3333/",
+    headers: {
+      Authorization: `Bearer ${cookies["dashgoAuth.token"]}`,
+    },
+  });
 
-        const { "dashgoAuth.refreshtoken": refreshToken } = cookies;
+  authApi.interceptors.response.use(
+    (response) => {
+      return response;
+    },
+    (error: AxiosError<ErrorResponse>) => {
+      if (error.response.status === 401) {
+        if (error.response.data?.code === "token.expired") {
+          cookies = parseCookies(ctx);
 
-        authApi
-          .post("refresh", {
-            refreshToken,
-          })
-          .then((response) => {
-            const { token } = response.data;
+          const { "dashgoAuth.refreshtoken": refreshToken } = cookies;
+          const originalConfig = error.config;
 
-            setCookie(undefined, "dashgoAuth.token", token, {
-              maxAge: 60 * 60 * 24 * 30, //30 dias
-              path: "/",
+          if (!isRefreshing) {
+            isRefreshing = true;
+
+            authApi
+              .post("refresh", {
+                refreshToken,
+              })
+              .then((response) => {
+                const { token } = response.data;
+
+                setCookie(ctx, "dashgoAuth.token", token, {
+                  maxAge: 60 * 60 * 24 * 30, //30 dias
+                  path: "/",
+                });
+                setCookie(
+                  ctx,
+                  "dashgoAuth.refreshtoken",
+                  response.data.refreshToken,
+                  {
+                    maxAge: 60 * 60 * 24 * 30, //30 dias
+                    path: "/",
+                  }
+                );
+
+                authApi.defaults.headers["Authorization"] = "Bearer " + token;
+
+                failedRequestsQueue.forEach((request) =>
+                  request.onSucess(token)
+                );
+                failedRequestsQueue = [];
+              })
+              .catch((err) => {
+                failedRequestsQueue.forEach((request) =>
+                  request.onFailure(err)
+                );
+                failedRequestsQueue = [];
+
+                if (process.browser) {
+                  signOut();
+                }
+              })
+              .finally(() => {
+                isRefreshing = false;
+              });
+          }
+
+          return new Promise((resolve, reject) => {
+            failedRequestsQueue.push({
+              onSucess: (token: string) => {
+                originalConfig.headers["Authorization"] = "Bearer " + token;
+
+                resolve(authApi(originalConfig));
+              },
+              onFailure: (err: AxiosError) => {
+                reject(err);
+              },
             });
-            setCookie(
-              undefined,
-              "dashgoAuth.refreshtoken",
-              response.data.refreshToken,
-              {
-                maxAge: 60 * 60 * 24 * 30, //30 dias
-                path: "/",
-              }
-            );
-
-            authApi.defaults.headers["Authorization"] = "Bearer " + token;
           });
-      } else {
+        } else {
+          if (process.browser) {
+            signOut();
+          } else {
+            return Promise.reject(new AuthTokenError());
+          }
+        }
       }
+      return Promise.reject(error);
     }
-  }
-);
+  );
+  return authApi;
+}

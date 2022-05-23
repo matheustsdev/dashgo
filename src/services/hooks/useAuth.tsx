@@ -5,10 +5,9 @@ import {
   useEffect,
   useState,
 } from "react";
-import { parseCookies, setCookie } from "nookies";
+import { parseCookies, setCookie, destroyCookie } from "nookies";
 import Router from "next/router";
-import { authApi } from "../api/authApi";
-import { api } from "../api";
+import { authApi } from "../api/authAPIClient";
 
 type User = {
   email: string;
@@ -33,6 +32,13 @@ type AuthProviderProps = {
 
 const AuthContext = createContext({} as AuthContextData);
 
+export function signOut() {
+  destroyCookie(undefined, "dashgoAuth.token");
+  destroyCookie(undefined, "dashgoAuth.refreshtoken");
+
+  Router.push("/");
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User>();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,11 +47,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { "dashgoAuth.token": token } = parseCookies();
 
     if (token) {
-      authApi.get("me").then((response) => {
-        const { email, permissions, roles } = response.data;
+      authApi
+        .get("me")
+        .then((response) => {
+          const { email, permissions, roles } = response.data;
 
-        setUser({ email, permissions, roles });
-      });
+          setUser({ email, permissions, roles });
+        })
+        .catch(() => {
+          signOut();
+        });
     }
   }, []);
 
