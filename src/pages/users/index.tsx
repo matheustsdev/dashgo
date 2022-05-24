@@ -28,6 +28,7 @@ import { queryClient } from "../../services/queryClient";
 import { withSSRAuth } from "../../utils/withSSRAuth";
 import { setupAuthAPIClient } from "../../services/api/authApi";
 import decode from "jwt-decode";
+import { Can } from "../../components/Can";
 
 export default function UserList() {
   const [page, setPage] = useState(1);
@@ -66,15 +67,17 @@ export default function UserList() {
               )}
             </Heading>
             <NextLink href="/users/create" passHref>
-              <Button
-                as="a"
-                size="sm"
-                fontSize="sm"
-                colorScheme="pink"
-                leftIcon={<Icon as={RiAddLine} fontSize="20" />}
-              >
-                Criar novo
-              </Button>
+              <Can permissions={["users.create"]}>
+                <Button
+                  as="a"
+                  size="sm"
+                  fontSize="sm"
+                  colorScheme="pink"
+                  leftIcon={<Icon as={RiAddLine} fontSize="20" />}
+                >
+                  Criar novo
+                </Button>
+              </Can>
             </NextLink>
           </Flex>
 

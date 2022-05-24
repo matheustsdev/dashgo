@@ -147,10 +147,16 @@ export default function CreateUser() {
     </Box>
   );
 }
-export const getServerSideProps = withSSRAuth(async (ctx) => {
-  const apiClient = setupAuthAPIClient(ctx);
+export const getServerSideProps = withSSRAuth(
+  async (ctx) => {
+    const apiClient = setupAuthAPIClient(ctx);
 
-  return {
-    props: {},
-  };
-});
+    return {
+      props: {},
+    };
+  },
+  {
+    permissions: ["users.create"],
+    roles: ["administrator"],
+  }
+);
