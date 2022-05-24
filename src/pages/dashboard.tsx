@@ -2,10 +2,12 @@ import { Box, Flex, SimpleGrid, Text, theme } from "@chakra-ui/react";
 import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
+import { Can } from "../components/Can";
 import { Header } from "../components/Header";
 import { Sidebar } from "../components/Sidebar";
 import { setupAuthAPIClient } from "../services/api/authApi";
 import { authApi } from "../services/api/authAPIClient";
+import { useCan } from "../services/hooks/useCan";
 import { withSSRAuth } from "../utils/withSSRAuth";
 
 const Chart = dynamic(() => import("react-apexcharts"), {
@@ -63,6 +65,10 @@ const options: ApexOptions = {
 const series = [{ name: "series1", data: [31, 120, 10, 28, 51, 18, 109] }];
 
 export default function Dashboard() {
+  const userCanSeeMetrics = useCan({
+    permissions: ["metrics.list"],
+  });
+
   useEffect(() => {
     authApi
       .get("me")
@@ -86,18 +92,30 @@ export default function Dashboard() {
           minChildWidth="320px"
           alignContent="flex-start"
         >
-          <Box p={["6", "8"]} bg="gray.800" borderRadius="8" pb="4">
-            <Text fontSize="lg" mb="4">
-              Inscritos da semana
-            </Text>
-            <Chart type="area" height={160} options={options} series={series} />
-          </Box>
-          <Box p={["6", "8"]} bg="gray.800" borderRadius="8" pb="4">
-            <Text fontSize="lg" mb="4">
-              Taxa de abertura
-            </Text>
-            <Chart type="area" height={160} options={options} series={series} />
-          </Box>
+          <Can permissions={["metrics.list"]}>
+            <Box p={["6", "8"]} bg="gray.800" borderRadius="8" pb="4">
+              <Text fontSize="lg" mb="4">
+                Inscritos da semana
+              </Text>
+              <Chart
+                type="area"
+                height={160}
+                options={options}
+                series={series}
+              />
+            </Box>
+            <Box p={["6", "8"]} bg="gray.800" borderRadius="8" pb="4">
+              <Text fontSize="lg" mb="4">
+                Taxa de abertura
+              </Text>
+              <Chart
+                type="area"
+                height={160}
+                options={options}
+                series={series}
+              />
+            </Box>
+          </Can>
         </SimpleGrid>
       </Flex>
     </Flex>

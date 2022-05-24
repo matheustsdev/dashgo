@@ -8,6 +8,7 @@ import {
 import { parseCookies, setCookie, destroyCookie } from "nookies";
 import Router from "next/router";
 import { authApi } from "../api/authAPIClient";
+import { deflate } from "zlib";
 
 type User = {
   email: string;
@@ -22,6 +23,7 @@ type SignInCredentials = {
 
 type AuthContextData = {
   signIn(credentials: SignInCredentials): Promise<void>;
+  signOut(): void;
   user: User;
   isAuthenticated: boolean;
 };
@@ -30,11 +32,15 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
-const AuthContext = createContext({} as AuthContextData);
+export const AuthContext = createContext({} as AuthContextData);
+
+let authChannel: BroadcastChannel;
 
 export function signOut() {
   destroyCookie(undefined, "dashgoAuth.token");
   destroyCookie(undefined, "dashgoAuth.refreshtoken");
+
+  authChannel.postMessage("signOut");
 
   Router.push("/");
 }
@@ -42,23 +48,6 @@ export function signOut() {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User>();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const { "dashgoAuth.token": token } = parseCookies();
-
-    if (token) {
-      authApi
-        .get("me")
-        .then((response) => {
-          const { email, permissions, roles } = response.data;
-
-          setUser({ email, permissions, roles });
-        })
-        .catch(() => {
-          signOut();
-        });
-    }
-  }, []);
 
   async function signIn({ email, password }: SignInCredentials) {
     try {
@@ -79,19 +68,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       setUser({ email, permissions, roles });
+      setIsAuthenticated(true);
 
       authApi.defaults.headers["Authorization"] = "Bearer " + token;
 
       Router.push("/dashboard");
-
+      authChannel.postMessage("signIn");
       console.log(response);
     } catch (e) {
       console.log(e);
     }
   }
 
+  useEffect(() => {
+    const { "dashgoAuth.token": token } = parseCookies();
+
+    if (token) {
+      authApi
+        .get("me")
+        .then((response) => {
+          const { email, permissions, roles } = response.data;
+
+          setUser({ email, permissions, roles });
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          signOut();
+        });
+    }
+  }, []);
+
+  useEffect(() => {
+    authChannel = new BroadcastChannel("auth");
+
+    authChannel.onmessage = (message) => {
+      switch (message.data) {
+        case "signOut":
+          Router.reload();
+          break;
+        case "signIn":
+          Router.reload();
+
+          break;
+        default:
+          break;
+      }
+    };
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ signIn, user, isAuthenticated }}>
+    <AuthContext.Provider value={{ signIn, signOut, user, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,7 +6,7 @@ interface ProfileProps {
 }
 
 export function Profile({ showProfileData = true }: ProfileProps) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <Flex align="center">
@@ -22,6 +22,8 @@ export function Profile({ showProfileData = true }: ProfileProps) {
         size="md"
         name="Matheus Teixeira"
         src="https://github.com/matheustsdev.png"
+        onClick={signOut}
+        cursor="pointer"
       />
     </Flex>
   );

@@ -21,14 +21,13 @@ import { Header } from "../../components/Header";
 import { Sidebar } from "../../components/Sidebar";
 import { RiAddLine, RiPencilLine } from "react-icons/ri";
 import { Pagination } from "../../components/Pagination";
-import { useEffect, useState } from "react";
-import { useQuery } from "react-query";
+import { useState } from "react";
 import { api } from "../../services/api";
 import { useUsers } from "../../services/hooks/useUsers";
-import { database } from "faker";
 import { queryClient } from "../../services/queryClient";
 import { withSSRAuth } from "../../utils/withSSRAuth";
 import { setupAuthAPIClient } from "../../services/api/authApi";
+import decode from "jwt-decode";
 
 export default function UserList() {
   const [page, setPage] = useState(1);
@@ -153,10 +152,16 @@ export default function UserList() {
     </Box>
   );
 }
-export const getServerSideProps = withSSRAuth(async (ctx) => {
-  const apiClient = setupAuthAPIClient(ctx);
+export const getServerSideProps = withSSRAuth(
+  async (ctx) => {
+    const apiClient = setupAuthAPIClient(ctx);
 
-  return {
-    props: {},
-  };
-});
+    return {
+      props: {},
+    };
+  },
+  {
+    permissions: ["users.list"],
+    roles: ["editor", "administrator"],
+  }
+);
